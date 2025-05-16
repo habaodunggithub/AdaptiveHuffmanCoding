@@ -1,8 +1,5 @@
 #include "AdaptiveHuffmanCoding.h"
-#include <algorithm>
-#include <assert.h>
 #include <bitset>
-#include <sstream>
  
 AdaptiveHuffmanCoding::AdaptiveHuffmanCoding() {
 	root = new HuffmanNode(-1, 0, 256, nullptr, nullptr, nullptr, true);
@@ -33,7 +30,7 @@ void AdaptiveHuffmanCoding::Encode(int symbol, int& code, int& len) {
 	}
 	
 	GetPathToSymbol(root, NYTNode, code, len, 0, 0);
-	code = (code << 8) | symbol;
+	code = (code << 8) | static_cast<unsigned char>(symbol);
 	len += 8;
 
 	UpdateTreeModel(symbol);
@@ -103,6 +100,7 @@ void AdaptiveHuffmanCoding::GetPathToSymbol(HuffmanNode *crr, HuffmanNode *resul
 	if (crr == result) {
 		code = curCode;
 		len = curLen;
+		return;
 	}
 
 

@@ -54,6 +54,7 @@ public:
 	AdaptiveHuffmanCoding();
 	void UpdateTreeModel(int);
 	void Encode(int, int&, int&);
+	void Encode();
 	void Decode();
 	
 	~AdaptiveHuffmanCoding();

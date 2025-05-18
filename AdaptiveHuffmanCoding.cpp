@@ -30,73 +30,122 @@ void AdaptiveHuffmanCoding::Encode(int symbol, int& code, int& len) {
 	}
 	
 	GetPathToSymbol(root, NYTNode, code, len, 0, 0);
-	code = (code << 8) | static_cast<unsigned char>(symbol);
-	len += 8;
+	if (symbol == AdaptiveHuffmanCoding::PSEUDO_EOF) {
+		code = (code << 9) | (symbol);
+		len += 9;
+	}
+	else {
+		code = (code << 8) | static_cast<unsigned char>(symbol);
+		len += 8;
+	}
 
 	UpdateTreeModel(symbol);
 }
 
-void AdaptiveHuffmanCoding::Decode() {
-	std::ifstream fin(inpFile, std::ios::binary);
-	std::ofstream fout(outFile);
-	if (!fin)
-		return;
+void AdaptiveHuffmanCoding::Encode() {
+	std::ifstream inputFile(inpFile);
+    std::ofstream outputFile(outFile, std::ios::binary);
+	uint64_t bitBuffer = 0;
+    int bitCount = 0;
+	char symbol;
 
-	HuffmanNode *cur = root;
-	char buffer = 0;
-	fin.read(&buffer, 1);
-	int bitCount = 8;
-	bool bit = 0;
-	int result = 0;
-	int checkEOF = 0;
-	while (true) {
-		result = 0;
-		bit = 0;
-		checkEOF = 0;
+	while (inputFile.get(symbol)) {
+        int code = 0;
+        int len = 0;
+        Encode(symbol, code, len);
 
-		if (bitCount == 0) {
-			fin.read(&buffer, 1);
-			if (!fin)
-				return;
-			bitCount = 8;
-		}
+        bitBuffer <<= len;
+        bitBuffer |= code;
+        bitCount += len;
 
-		if (cur->isNYT == false) {
-			bitCount--;
-			bit = (buffer >> bitCount) & 1;
-		}
-		
-		if (cur->value != -1) {
-			fout << (char)cur->value;
-			UpdateTreeModel(cur->value);
-			cur = root;
-			std::cout << "1";
-		}
-		else if (cur->isNYT) {
-			result = (buffer << (8 - bitCount)) & 0xFF; 
-			fin.read(&buffer, 1);	
-			if (!fin)
-				return;
-
-			result |= (buffer >> bitCount);
-
-			checkEOF = (int)((result << 1) | ((buffer >> (bitCount - 1)) & 1));
-			if (checkEOF == AdaptiveHuffmanCoding::PSEUDO_EOF)
-				return;
-
-			fout << (char)result;
-			UpdateTreeModel(result);
-			cur = root;
-			std::cout << "2";
-		}
-		else if(bit)
-			cur = cur->right;
-		else 
-			cur = cur->left;
+        while (bitCount >= 8) {
+            uint8_t byte = (bitBuffer >> (bitCount - 8)) & 0xFF;
+            outputFile.put(byte);
+            bitCount -= 8;
+        }
 	}
 
-	fin.close();
-	fout.close();
+    int code = 0;
+    int len = 0;
+	Encode(AdaptiveHuffmanCoding::PSEUDO_EOF, code, len);
+    bitBuffer <<= len;
+    bitBuffer |= code;
+    bitCount += len;
+    
+    while (bitCount >= 8) {
+        uint8_t byte = (bitBuffer >> (bitCount - 8)) & 0xFF;
+        outputFile.put(byte);
+        bitCount -= 8;
+    }
+    if (bitCount > 0) {
+        uint8_t byte = (bitBuffer << (8 - bitCount)) & 0xFF;
+        outputFile.put(byte);
+    }
+    inputFile.close();
+    outputFile.close();
+}
+
+void AdaptiveHuffmanCoding::Decode() {
+	std::ifstream fin(inpFile, std::ios::binary);
+    std::ofstream fout(outFile);
+    if (!fin) return;
+
+    HuffmanNode* cur = root;
+    char buffer = 0;
+    int bitCount = 0;
+	int checkEOF;
+
+    // Hàm đọc từng bit an toàn từ file nhị phân
+    auto readBit = [&](int& bit) -> bool {
+        if (bitCount == 0) {
+            if (!fin.read(&buffer, 1))
+                return false;
+            bitCount = 8;
+        }
+        bitCount--;
+        bit = (buffer >> bitCount) & 1;
+        return true;
+    };
+
+    while (true) {
+		bool isOut = false;
+        while (cur->left || cur->right) {
+            int bit = 0;
+            if (!readBit(bit)) {
+				isOut = true;
+				break;
+			}
+            cur = bit ? cur->right : cur->left;
+        }
+		if (isOut)
+			break;
+
+        // Nếu là NYT → đọc 8 bit kế tiếp để lấy ký tự mới
+        if (cur->isNYT) {
+            int newChar = 0;
+            for (int i = 0; i < 8; ++i) {
+                int b = 0;
+                if (!readBit(b)) break; // thiếu bit
+                newChar = (newChar << 1) | b;
+            }
+
+			checkEOF = ((newChar*2) | ((buffer >> (bitCount - 1)) & 1));
+			if (checkEOF == AdaptiveHuffmanCoding::PSEUDO_EOF)
+				break;
+
+            fout.put(static_cast<char>(newChar));
+            UpdateTreeModel(newChar);
+        }
+        else {
+            fout.put(static_cast<char>(cur->value));
+            UpdateTreeModel(cur->value);
+        }
+
+        cur = root;
+    }
+
+    fin.close();
+    fout.close();
 }
 
 

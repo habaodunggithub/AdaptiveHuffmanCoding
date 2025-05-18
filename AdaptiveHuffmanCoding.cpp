@@ -1,8 +1,8 @@
 #include "AdaptiveHuffmanCoding.h"
-#include <bitset>
- 
+
+
 AdaptiveHuffmanCoding::AdaptiveHuffmanCoding() {
-	root = new HuffmanNode(-1, 0, 256, nullptr, nullptr, nullptr, true);
+	root = new HuffmanNode(-1, 0, 512, nullptr, nullptr, nullptr, true);
     NYTNode = root;
 }
 
@@ -34,6 +34,69 @@ void AdaptiveHuffmanCoding::Encode(int symbol, int& code, int& len) {
 	len += 8;
 
 	UpdateTreeModel(symbol);
+}
+
+void AdaptiveHuffmanCoding::Decode() {
+	std::ifstream fin(inpFile, std::ios::binary);
+	std::ofstream fout(outFile);
+	if (!fin)
+		return;
+
+	HuffmanNode *cur = root;
+	char buffer = 0;
+	fin.read(&buffer, 1);
+	int bitCount = 8;
+	bool bit = 0;
+	int result = 0;
+	int checkEOF = 0;
+	while (true) {
+		result = 0;
+		bit = 0;
+		checkEOF = 0;
+
+		if (bitCount == 0) {
+			fin.read(&buffer, 1);
+			if (!fin)
+				return;
+			bitCount = 8;
+		}
+
+		if (cur->isNYT == false) {
+			bitCount--;
+			bit = (buffer >> bitCount) & 1;
+		}
+		
+		if (cur->value != -1) {
+			fout << (char)cur->value;
+			UpdateTreeModel(cur->value);
+			cur = root;
+			std::cout << "1";
+		}
+		else if (cur->isNYT) {
+			result = (buffer << (8 - bitCount)) & 0xFF; 
+			fin.read(&buffer, 1);	
+			if (!fin)
+				return;
+
+			result |= (buffer >> bitCount);
+
+			checkEOF = (int)((result << 1) | ((buffer >> (bitCount - 1)) & 1));
+			if (checkEOF == AdaptiveHuffmanCoding::PSEUDO_EOF)
+				return;
+
+			fout << (char)result;
+			UpdateTreeModel(result);
+			cur = root;
+			std::cout << "2";
+		}
+		else if(bit)
+			cur = cur->right;
+		else 
+			cur = cur->left;
+	}
+
+	fin.close();
+	fout.close();
 }
 
 

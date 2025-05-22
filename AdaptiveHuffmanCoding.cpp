@@ -85,6 +85,22 @@ void AdaptiveHuffmanCoding::Encode() {
     outputFile.close();
 }
 
+void AdaptiveHuffmanCoding::EncodeAndMeasure(std::string inFileName, int times) {
+    unsigned long long sum = 0;
+    for (int i = 0; i < times; ++i) {
+        auto start = std::chrono::high_resolution_clock::now();
+        AdaptiveHuffmanCoding encoder;
+        encoder.inpFile = inFileName;
+        encoder.outFile = "temp/temp_output_" + std::to_string(i) + ".huf";
+        encoder.Encode();
+        auto end = std::chrono::high_resolution_clock::now();
+        auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
+        sum += duration.count();
+        std::cout << i << "\n";
+    }
+    std::cout << "Average time for encode: " << sum/times << "\n";
+}
+
 void AdaptiveHuffmanCoding::Decode() {
 	std::ifstream fin(inpFile, std::ios::binary);
     std::ofstream fout(outFile);
@@ -129,6 +145,11 @@ void AdaptiveHuffmanCoding::Decode() {
                 newChar = (newChar << 1) | b;
             }
 
+            if (bitCount == 0) {
+                if (!fin.read(&buffer, 1))
+                    break;
+                bitCount = 8;
+            }   
 			checkEOF = ((newChar*2) | ((buffer >> (bitCount - 1)) & 1));
 			if (checkEOF == AdaptiveHuffmanCoding::PSEUDO_EOF)
 				break;
@@ -146,6 +167,22 @@ void AdaptiveHuffmanCoding::Decode() {
 
     fin.close();
     fout.close();
+}
+
+void AdaptiveHuffmanCoding::DecodeAndMeasure(std::string outFileName, int times) {
+    unsigned long long sum = 0;
+    for (int i = 0; i < times; ++i) {
+        auto start = std::chrono::high_resolution_clock::now();
+        AdaptiveHuffmanCoding decoder;
+        decoder.inpFile = outFileName;
+        decoder.outFile = "temp/temp_output_" + std::to_string(i) + ".txt";
+        decoder.Decode();
+        auto end = std::chrono::high_resolution_clock::now();
+        auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
+        sum += duration.count();
+        std::cout << i << "\n";
+    }
+    std::cout << "Average time for decode: " << sum/1000 << "\n";
 }
 
 

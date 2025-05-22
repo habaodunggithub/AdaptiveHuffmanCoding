@@ -4,6 +4,7 @@
 #include <string>
 #include <fstream>
 #include <cstdint>
+#include <chrono>
 
 const int MAXCHAR = 256;
 const int MAXBUFF = 1000;
@@ -23,20 +24,20 @@ struct HuffmanNode {
 	bool isNYT;
 	
 	HuffmanNode(int value, int weight, int order, HuffmanNode* left, HuffmanNode* right,
-		HuffmanNode* parent, bool isNYT = false)
-		:value(value), weight(weight), order(order), left(left), right(right), parent(parent), isNYT(isNYT)
-		{}
-		HuffmanNode()
-		: value(0), weight(0), order(0), left(nullptr), right(nullptr), parent(nullptr), isNYT(false)
-		{}
-		
-		HuffmanNode(bool isNYT, int value)
-		: HuffmanNode()
-		{
-			this->isNYT = isNYT;
-			this->value = value;
-		}
-	};
+	HuffmanNode* parent, bool isNYT = false)
+	:value(value), weight(weight), order(order), left(left), right(right), parent(parent), isNYT(isNYT)
+	{}
+	HuffmanNode()
+	: value(0), weight(0), order(0), left(nullptr), right(nullptr), parent(nullptr), isNYT(false)
+	{}
+	
+	HuffmanNode(bool isNYT, int value)
+	: HuffmanNode()
+	{
+		this->isNYT = isNYT;
+		this->value = value;
+	}
+};
 	
 	HuffmanNode* GetSymbolNode(int, HuffmanNode*) const;
 	void FindBlockLeader(HuffmanNode*, HuffmanNode*&) const;
@@ -55,7 +56,10 @@ public:
 	void UpdateTreeModel(int);
 	void Encode(int, int&, int&);
 	void Encode();
+	void EncodeAndMeasure(std::string, int);
 	void Decode();
+	void DecodeAndMeasure(std::string, int);
+
 	
 	~AdaptiveHuffmanCoding();
 	static const int PSEUDO_EOF = 256;
